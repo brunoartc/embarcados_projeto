@@ -13,5 +13,7 @@ static void finish_com(void)
     return;
 }
 
+MODULE_LICENSE("Dual BSD/GPL");
+
 module_init(init_com);
 module_exit(finish_com);

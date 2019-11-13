@@ -1,3 +1,23 @@
+
+Um driver de linux é um programa que facilita a comunicação dos programas com a parte fisica do nosso dispositivo 
+
+
+Para entendermos como isso funciona primeiro temos que entender o que significam os programas e o kernel
+
+Os programas rodam em uma parte especial da nossa memoria chamada de espaço de usuario, como por exemplo o python ou ate mesmo um bash, esses programas normalmente nao precisam acessar itens de mais baixo nivel como por exxemplo acesso direto a memoria ou portas UBS por exemplo.
+
+Essas tarefas sao executadas pelo kernel space que sabe lidar com o nosso hardware de uma maneira efficiente nos dando uma "API" para isso, são aqui que sao localizados os drivers compilados juntamente ao linux
+
+Os programas localizados no user space tem um momento especifico para pedir coisas para o kernel sobre o hardware como eh o caso de exploradores de arquivos e comunicação serial, caso algum desses programas queira se comunicar com um acessorio que nao tenha seu proprio driver, temos um problema pois esse nao conseguira ser comunicado
+
+Entao temos outra opcao, desenvolver nosso proprio driver, e comos nao vamos nos dar ao trabalho de compilar o kernel novamente podemos utilizar modulos que podem ser carregados e tem uma interface com o kernel space 
+
+## TODO
+
+
+
+
+
 Para fazer um driver do linux temos duas opções, podemos fazer um modulo que seja compilado junto ao kernel ou simplesmente fazer um driver para ser carregado como um modulo vindo do user-space e é isso que vamos fazer desenvolver um driver para fazer uma conn virtual que comunique com seu pc
 
 para isso precisamos de um codigo fonte que sera feito em c

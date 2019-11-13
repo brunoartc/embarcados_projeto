@@ -94,3 +94,51 @@ podemos entao compilar o nosso programa usando uma Makefile contendo
 ```Makefile
 obj-m := tcom.o
 ```
+
+
+usamos tambem por padrao o lib modules do nosso sistema que esta localizado em ```/lib/modules/$(uname -r)/build``` 
+## se for testar no seu linux deixe /lib/modules/$(uname -r)/build
+ou podemos gerar nosso proprio com um kernel do linux 
+
+```bash
+make modules_install INSTALL_MOD_PATH=/some/root/folder
+```
+
+ou simplesmente dentro da sua pasta do linux
+
+```bash
+make modules
+```
+
+usando
+
+```bash
+make -C /path/para/source/linux M=`pwd` modules
+
+```
+
+para compilar
+
+com isso teremos um arquivo .ko que para todos os fins é o nosso driver, este pode ser carregado e descarregado usando insmod e rmmod respectivamente
+
+como uma simples demosntração podemos abrir um terminal e observar os logs do linux
+
+```bash
+tail -f /var/log/kern.log
+```
+
+enquanto em outro terminal compilamos o modulo e carregamos ele
+
+```bash
+make -C /path/para/source/linux M=`pwd` modules
+sudo insmod ./tcom.ko
+sudo rmmod ./tcom.ko
+
+```
+
+depois de executar esses comandos no linux voltamos ao nosso terminal que esta acompanhando o log do kernel e vemos que com sucesso obtivemos a mensagem
+
+```log
+kernel: [666.1337] Hello World
+```
+

@@ -10,6 +10,7 @@ ifneq ($(KERNELRELEASE),)
 # If we running without kernel build system
 else
 	BUILDSYSTEM_DIR:=/lib/modules/$(shell uname -r)/build
+	#BUILDSYSTEM_DIR:=$(LINUXSOURCE)
 	PWD:=$(shell pwd)
 all : 
 # run kernel build system to make module

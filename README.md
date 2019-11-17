@@ -163,4 +163,189 @@ Com isso temos a nossa primeira implementacao de um driver que simplesmesnte sob
 
 Agora precisamos dar alguma funcionalidade para o nosso driver, como por exemplo interfacear com o hardware para simplesmente receber mensagens
 
-Como tudo no linux precisamos abrir um arquivo para fazer a comunicacao com o kernel space e este fazer a comunicacao com o hardware 
+Como tudo no linux precisamos abrir um arquivo para fazer a comunicacao com o kernel space e este fazer a comunicacao com o hardware, para isso precisamos importar mais algumas bibliotecas 
+
+```C
+#include <linux/config.h>
+
+/* para os codigos de erros que serão utilizados daqui para a frente */
+#include <linux/errno.h> 
+
+/* controlar o sistema de arquivos */
+
+#include <linux/fs.h>
+#include <linux/proc_fs.h>
+
+
+/* alocar memoria no kernel space */
+#include <linux/slab.h> 
+
+/* medir o tamanho das variaveis usado no kmalloc */
+#include <linux/types.h> 
+
+
+#include <linux/fcntl.h> /* O_ACCMODE */
+
+/* acessar o user space */
+#include <asm/uaccess.h> 
+
+
+```
+
+com esses includes novos podemos trabalhar com algumas funcoes mais avancadas da criacao de drivers e dar mais um passo ao nosso vriver que interpreta mensagens do hardware fisico mas ainda preisamos fazer as funcoes que permitem que nosso driver funcione, no caso para excrever e ler apenas um char, comecaremos declarando qual a regiao de memoria que iremos acessar com o numero de identificação do driver para ele acessar os perifericos que utilizam desse driver
+
+```C
+
+/* o numero da versao do nosso driver */
+int memory_major = 60;
+
+/* onde nossa memoria vai ser salva*/
+
+char *memory_buffer;
+
+```
+
+temos tambem que mudar nossa função de inicialização para que quando o driver se inicialize ele aloque um espaço de memoria que será usado, assim como um programa em C, sua liberação tambem deve ser criada, nossa função de inicialização e saida deve ser mais ou menos assim
+
+```C
+int memory_init(void) {
+
+  int result;
+
+
+
+  /* Registrar o nosso driver para os hardwares certos */
+
+  result = register_chrdev(memory_major, "memory", &memory_fops);
+
+
+    /* Alocar o espaço de memoria para o programa*/
+  memory_buffer = kmalloc(1, GFP_KERNEL); 
+
+  if (!memory_buffer) { 
+
+    result = -ENOMEM;
+
+    memory_exit(); 
+
+    return result;
+
+  } 
+
+  memset(memory_buffer, 0, 1);
+
+
+
+  printk("<1>Driver simples de memoria inicializado\n"); 
+
+  return 0;
+
+
+    
+
+}
+
+
+void memory_exit(void) {
+
+  /* Liberando o numero de registro no sistema*/
+
+  unregister_chrdev(memory_major, "memory");
+
+
+
+  /* Liberando o espaço de memoria */
+
+  if (memory_buffer) {
+
+    kfree(memory_buffer);
+
+  }
+
+
+
+  printk("<1>Liberando memorias e descarregando modulo\n");
+
+
+
+}
+
+```
+
+
+
+temos agora uma parte do nosso programa para iniciar e liberar espaços de memoria que podemos trabalhar, mas nosso driver ainda nao executa nenhuma função 
+
+para isso faremos uma funcao que abre o nosso "arquivo" e uma que deixa nosso arquivo disponivel para outros programas apos a execução da primeira
+
+```C
+int memory_open(struct inode *inode, struct file *filp) {
+
+
+
+  /* Success */
+
+  return 0;
+
+}
+int memory_release(struct inode *inode, struct file *filp) {
+
+ 
+
+  /* Success */
+
+  return 0;
+
+}
+```
+
+
+agora tambem precisamos que apos abrir o local de memoria do nosso driver nos possamos ler e escrever nele podemos fazer isso com uma função que copia do buffer para a nossa memoria e vice-versa
+
+```C
+ssize_t memory_read(struct file *filp, char *buf, 
+
+                    size_t count, loff_t *f_pos) { 
+
+ 
+
+  /* Transfering data to user space */ 
+
+  copy_to_user(buf,memory_buffer,1);
+
+
+
+  /* Changing reading position as best suits */ 
+
+  if (*f_pos == 0) { 
+
+    *f_pos+=1; 
+
+    return 1; 
+
+  } else { 
+
+    return 0; 
+
+  }
+
+}
+ssize_t memory_write( struct file *filp, char *buf,
+
+                      size_t count, loff_t *f_pos) {
+
+
+
+  char *tmp;
+
+
+
+  tmp=buf+count-1;
+
+  copy_from_user(memory_buffer,tmp,1);
+
+  return 1;
+
+}
+
+```

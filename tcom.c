@@ -27,8 +27,6 @@
 #include <linux/fcntl.h> /* O_ACCMODE */
 
 
-int copy_to_user(void *dst, const void *src, unsigned int size); //TODO: !FIX depends on arch 
-int copy_from_user(void *dst, const void *src, unsigned int size); //TODO: !FIX depends on arch 
 int memory_major = 60;
 
 /* Buffer to store data */
@@ -36,15 +34,67 @@ int memory_major = 60;
 char *memory_buffer;
 
 
-static int init_com(void)
-{
-    printk("\nHello World\n");
-    return  0;
-}
+
    
 static void finish_com(void)
 {
-    return;
+    /* liberando o numero de versao */
+
+  unregister_chrdev(memory_major, "memory");
+
+
+
+  /* liberando a memoria para outro programa */
+
+  if (memory_buffer) {
+
+    kfree(memory_buffer);
+
+  }
+
+
+
+  printk("<1>Removing memory module\n");
+}
+
+static int init_com(void)
+{
+    int result;
+
+
+
+  /* registrando o driver */
+
+ register_chrdev(memory_major, "memory", NULL); //TODO FIX NULL with pointer to file_operands
+
+
+
+
+  /* alocar a memoria para o driver */
+
+  memory_buffer = kmalloc(1, GFP_KERNEL); 
+
+  if (!memory_buffer) { 
+
+    result = -ENOMEM;
+
+    finish_com();
+
+    return result;
+
+  } 
+
+  memset(memory_buffer, 0, 1);
+
+
+
+  printk("<1>Inserting memory module\n"); 
+
+  return 0;
+
+
+    
+
 }
 
 int memory_open(struct inode *inode, struct file *filp) {
@@ -73,7 +123,7 @@ ssize_t memory_read(struct file *filp, char *buf,
 
   /* Transfering data to user space */ 
 
-  copy_to_user(buf,memory_buffer,1);
+  raw_copy_to_user(buf,memory_buffer,1);
 
 
 
@@ -105,11 +155,15 @@ ssize_t memory_write( struct file *filp, char *buf,
 
   tmp=buf+count-1;
 
-  copy_from_user(memory_buffer,tmp,1);
+  raw_copy_from_user(memory_buffer,tmp,1);
 
   return 1;
 
 }
+
+
+
+
 
 MODULE_LICENSE("Dual BSD/GPL");
 

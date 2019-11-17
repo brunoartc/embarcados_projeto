@@ -10,10 +10,7 @@ Essas tarefas sao executadas pelo kernel space que sabe lidar com o nosso hardwa
 
 Os programas localizados no user space tem um momento especifico para pedir coisas para o kernel sobre o hardware como eh o caso de exploradores de arquivos e comunicação serial, caso algum desses programas queira se comunicar com um acessorio que nao tenha seu proprio driver, temos um problema pois esse nao conseguira ser comunicado
 
-Entao temos outra opcao, desenvolver nosso proprio driver, e comos nao vamos nos dar ao trabalho de compilar o kernel novamente podemos utilizar modulos que podem ser carregados e tem uma interface com o kernel space 
-
-## TODO
-
+Entao temos outra opcao, desenvolver nosso proprio driver, ou um driver quer compila juntamente com o kernel e vem juntamente com ele, ou um simples modulo que é compilado a parte e depois carregado no linux a partir do user space que ensinaremos nesse tutorial
 
 
 
@@ -162,3 +159,8 @@ depois de executar esses comandos no linux voltamos ao nosso terminal que esta a
 kernel: [666.1337] Hello World
 ```
 
+Com isso temos a nossa primeira implementacao de um driver que simplesmesnte sobe uma mensagem para o kernel
+
+Agora precisamos dar alguma funcionalidade para o nosso driver, como por exemplo interfacear com o hardware para simplesmente receber mensagens
+
+Como tudo no linux precisamos abrir um arquivo para fazer a comunicacao com o kernel space e este fazer a comunicacao com o hardware 

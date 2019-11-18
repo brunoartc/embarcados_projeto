@@ -57,6 +57,83 @@ static void finish_com(void)
   printk("<1>Removing memory module\n");
 }
 
+
+
+int memory_open(struct inode *inode, struct file *filp) {
+
+
+
+  /* Success */
+
+  return 0;
+
+}
+int memory_release(struct inode *inode, struct file *filp) {
+
+ 
+
+  /* Success */
+
+  return 0;
+
+}
+static ssize_t memory_read(struct file *filp, char *buf, 
+
+                    size_t count, loff_t *f_pos) { 
+
+ 
+
+  /* Transfering data to user space */ 
+
+  raw_copy_to_user(buf,memory_buffer,1);
+
+
+
+  /* Changing reading position as best suits */ 
+
+  if (*f_pos == 0) { 
+
+    *f_pos+=1; 
+
+    return 1; 
+
+  } else { 
+
+    return 0; 
+
+  }
+
+}
+
+static ssize_t memory_write( struct file *filp, const char *buf,
+
+                      size_t count, loff_t *f_pos) {
+
+
+
+  char *tmp;
+
+
+
+  tmp=buf+count-1;
+
+  raw_copy_from_user(memory_buffer,tmp,1);
+
+  return 1;
+
+}
+
+
+static struct file_operations tcom_fops = 
+{
+    .owner   = THIS_MODULE,
+    .read    = memory_read,
+    .write   = memory_write,
+    .open    = memory_open,
+    .release = memory_release
+};
+
+
 static int init_com(void)
 {
     int result;
@@ -65,7 +142,7 @@ static int init_com(void)
 
   /* registrando o driver */
 
- register_chrdev(memory_major, "memory", NULL); //TODO FIX NULL with pointer to file_operands
+ register_chrdev(memory_major, "memory", &tcom_fops); //TODO FIX NULL with pointer to file_operands
 
 
 
@@ -97,69 +174,11 @@ static int init_com(void)
 
 }
 
-int memory_open(struct inode *inode, struct file *filp) {
 
+  
 
+  
 
-  /* Success */
-
-  return 0;
-
-}
-int memory_release(struct inode *inode, struct file *filp) {
-
- 
-
-  /* Success */
-
-  return 0;
-
-}
-ssize_t memory_read(struct file *filp, char *buf, 
-
-                    size_t count, loff_t *f_pos) { 
-
- 
-
-  /* Transfering data to user space */ 
-
-  raw_copy_to_user(buf,memory_buffer,1);
-
-
-
-  /* Changing reading position as best suits */ 
-
-  if (*f_pos == 0) { 
-
-    *f_pos+=1; 
-
-    return 1; 
-
-  } else { 
-
-    return 0; 
-
-  }
-
-}
-
-ssize_t memory_write( struct file *filp, char *buf,
-
-                      size_t count, loff_t *f_pos) {
-
-
-
-  char *tmp;
-
-
-
-  tmp=buf+count-1;
-
-  raw_copy_from_user(memory_buffer,tmp,1);
-
-  return 1;
-
-}
 
 
 
@@ -169,3 +188,7 @@ MODULE_LICENSE("Dual BSD/GPL");
 
 module_init(init_com);
 module_exit(finish_com);
+
+
+//ssize_t (*)(struct file *, const char *, size_t,  loff_t *)
+//ssize_t (*)(struct file *, char *, size_t,  loff_t *)’ {aka ‘long int (*)(struct file *, char *, long unsigned int,  long long int *)

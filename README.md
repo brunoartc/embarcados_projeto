@@ -303,7 +303,7 @@ int memory_release(struct inode *inode, struct file *filp) {
 agora tambem precisamos que apos abrir o local de memoria do nosso driver nos possamos ler e escrever nele podemos fazer isso com uma função que copia do buffer para a nossa memoria e vice-versa
 
 ```C
-ssize_t memory_read(struct file *filp, char *buf, 
+ssize_t memory_read(struct file *filp, const char *buf, 
 
                     size_t count, loff_t *f_pos) { 
 

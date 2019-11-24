@@ -349,3 +349,183 @@ ssize_t memory_write( struct file *filp, char *buf,
 }
 
 ```
+
+
+ate agora fizemos um modulo para o nosso proprio linux mas podemos tambem fazer a compilação de um modulo para um dispositivo ARM embarcado simplesmente mudando algumas linhas do nosso Makefile 
+
+```Makefile
+export CROSS_COMPILE=
+export ARCH=x86_64
+```
+
+por
+
+```Makefile
+export CROSS_COMPILE=gcc-arm-linux-gnueabi-
+export ARCH=arm
+```
+
+agora que temos um driver simples que consegue comprrender o que escrevemos e passar para um hardware virtual nosso podemos passar para coisas um pouco mais uteis e complexas como por exemplo controlar um led da placa, e é isso que faremos nessa sessão
+
+primeiramente utilizaremos o outro codigo de esqueleto ele tem que estar mais ou menos assim 
+
+```C
+#include <linux/kernel.h>
+#include <linux/init.h>
+#include <linux/module.h>
+/* para os codigos de erros que serão utilizados daqui para a frente */
+#include <linux/errno.h> 
+/* controlar o sistema de arquivos */
+#include <linux/fs.h>
+#include <linux/proc_fs.h>
+#include <asm/uaccess.h>
+/* alocar memoria no kernel space */
+#include <linux/slab.h> 
+/* medir o tamanho das variaveis usado no kmalloc */
+#include <linux/types.h> 
+#include <linux/fcntl.h> /* O_ACCMODE */
+int memory_major = 60;
+/* Buffer para guardar os dados */
+char *memory_buffer;
+static void finish_com(void)
+{
+    /* liberando o numero de versao */
+  unregister_chrdev(memory_major, "memory");
+  /* liberando a memoria para outro programa */
+  if (memory_buffer) {
+    kfree(memory_buffer);
+  }
+  printk("<1>Removing memory module\n");
+}
+
+
+
+int memory_open(struct inode *inode, struct file *filp) {
+  /* Success */
+  return 0;
+}
+int memory_release(struct inode *inode, struct file *filp) {
+  /* Success */
+  return 0;
+}
+static ssize_t memory_read(struct file *filp, char *buf, 
+
+                    size_t count, loff_t *f_pos) { 
+  /* Copia para o user space */ 
+  raw_copy_to_user(buf,memory_buffer,1);
+  /* Changing reading position as best suits */ 
+  if (*f_pos == 0) { 
+    *f_pos+=1; 
+    return 1; 
+  } else { 
+    return 0; 
+  }
+}
+
+static ssize_t memory_write( struct file *filp, const char *buf,
+                      size_t count, loff_t *f_pos) {
+  char *tmp;
+  tmp=buf+count-1;
+  raw_copy_from_user(memory_buffer,tmp,1);
+  return 1;
+}
+
+
+static struct file_operations tcom_fops = 
+{
+    .owner   = THIS_MODULE,
+    .read    = memory_read,
+    .write   = memory_write,
+    .open    = memory_open,
+    .release = memory_release
+};
+
+
+static int init_com(void)
+{
+    int result;
+  /* registrando o driver */
+ register_chrdev(memory_major, "memory", &tcom_fops); //TODO FIX NULL with pointer to file_operands
+  /* alocar a memoria para o driver */
+  memory_buffer = kmalloc(1, GFP_KERNEL); 
+  if (!memory_buffer) { 
+    result = -ENOMEM;
+    finish_com();
+    return result;
+  } 
+  memset(memory_buffer, 0, 1);
+  return 0;
+}
+MODULE_LICENSE("Dual BSD/GPL");
+module_init(init_com);
+module_exit(finish_com);
+
+```
+
+com esse codigo que fizemos na sessao anterior temos apensar que criar uma função que receba de input os nossos enderecos de memorias do pino e definir como os bits que precisam estar ligados como por exemplo vamos usar como base um raspbery e seus GPIOs (https://www.raspberrypi.org/app/uploads/2012/02/BCM2835-ARM-Peripherals.pdf)
+
+definimos primeiro a estrutura de um GPIO da rapberry como o exmplo abaixo
+
+```
+struct GpioRegisters
+{
+    uint32_t GPFSEL[6];
+    uint32_t Reserved1;
+    uint32_t GPSET[2];
+    uint32_t Reserved2;
+    uint32_t GPCLR[2];
+};
+
+struct GpioRegisters *s_pGpioRegisters;
+```
+
+então precisamos agora definir as funcoes para podermos fazer alguma coisa  quando tivermos os registradores do raspberry para isso podemos utilizar das seguintes funcoes
+
+```C
+static void definirFuncaoDoGPIO(int GPIO, int functionCode)
+{
+    int IndexRegistrador = GPIO / 10;
+    int bit = (GPIO % 10) * 3;
+ 
+    unsigned oldValue = s_pGpioRegisters-> GPFSEL[IndexRegistrador];
+    unsigned mask = 0b111 << bit;
+ 
+    s_pGpioRegisters-> GPFSEL[IndexRegistrador] = 
+        (oldValue & ~mask) | ((functionCode << bit) & mask);
+}
+ 
+static void SetGPIOOutputValue(int GPIO, bool outputValue)
+{
+    if (outputValue)
+        s_pGpioRegisters->GPSET[GPIO / 32] = (1 << (GPIO % 32));
+    else
+        s_pGpioRegisters->GPCLR[GPIO / 32] = (1 << (GPIO % 32));
+}
+```
+
+e com essas funcoes prontas podemos entao fazer as funcoes de inicializacao e finalizacao do nosso modulo
+
+
+```C
+
+static int __init LedBlinkModule_init(void)
+{
+    int result;
+ 
+    s_pGpioRegisters = 
+        (struct GpioRegisters *)__io_address(GPIO_BASE);
+    SetGPIOFunction( LedGpioPin, 0b001); //Output
+ 
+    setup_timer(&s_BlinkTimer, BlinkTimerHandler, 0);
+    result = mod_timer( &s_BlinkTimer, 
+                       jiffies + msecs_to_jiffies( s_BlinkPeriod));
+    BUG_ON(result < 0);
+}
+ 
+static void __exit LedBlinkModule_exit(void)
+{
+    SetGPIOFunction( LedGpioPin, 0); //Configure the pin as input
+    del_timer(&s_BlinkTimer);
+}
+
+```

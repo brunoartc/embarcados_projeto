@@ -1,25 +1,30 @@
 
-Um driver de linux é um programa que facilita a comunicação dos programas com a parte fisica do nosso dispositivo 
+## Introdução
 
+Um driver de linux é um programa que facilita a comunicação dos programas com a parte fisica do nosso dispositivo 
+### 1. Kernel space e user space
 
 Para entendermos como isso funciona primeiro temos que entender o que significam os programas e o kernel
 
-Os programas rodam em uma parte especial da nossa memoria chamada de espaço de usuario, como por exemplo o python ou ate mesmo um bash, esses programas normalmente nao precisam acessar itens de mais baixo nivel como por exxemplo acesso direto a memoria ou portas UBS por exemplo.
+Os programas rodam em uma parte especial da nossa memoria chamada de espaço de usuario, como por exemplo o python ou ate mesmo um bash, esses programas normalmente não precisam acessar itens de mais baixo nivel como por exemplo acesso direto a memoria ou portas UBS por exemplo.
 
-Essas tarefas sao executadas pelo kernel space que sabe lidar com o nosso hardware de uma maneira efficiente nos dando uma "API" para isso, são aqui que sao localizados os drivers compilados juntamente ao linux
+Essas tarefas sao executadas pelo kernel space que sabe lidar com o nosso hardware de uma maneira eficiente disponibilizando um tipo "API" para o user space lidar isso , e esse é o trabalho dos drivers, a parte da tradução dos comandos de usuario para que o kernel execute.
 
-Os programas localizados no user space tem um momento especifico para pedir coisas para o kernel sobre o hardware como eh o caso de exploradores de arquivos e comunicação serial, caso algum desses programas queira se comunicar com um acessorio que nao tenha seu proprio driver, temos um problema pois esse nao conseguira ser comunicado
+### 2. Como o driver conversa com o computador
 
-Entao temos outra opcao, desenvolver nosso proprio driver, ou um driver quer compila juntamente com o kernel e vem juntamente com ele, ou um simples modulo que é compilado a parte e depois carregado no linux a partir do user space que ensinaremos nesse tutorial
+Os programas localizados no user space tem um momento especifico para pedir coisas para o kernel sobre o hardware como eh o caso de exploradores de arquivos e comunicação serial, caso algum desses programas queira se comunicar com um acessorio que não tenha seu proprio driver, temos um problema pois esse não conseguira ser comunicado
+
+Entao temos outra opção para isso, desenvolver nosso proprio driver, para ser compilado juntamente com o kernel e vir juntamente com ele, ou um simples modulo que é compilado a parte e depois carregado no linux a partir do user space que ensinaremos nesse tutorial
 
 
 
+### 3. criação do modulo basico
 
-Para fazer um driver do linux temos duas opções, podemos fazer um modulo que seja compilado junto ao kernel ou simplesmente fazer um driver para ser carregado como um modulo vindo do user-space e é isso que vamos fazer desenvolver um driver para fazer uma conn virtual que comunique com seu pc
+O nosso modulo precisa ser criado em alguma linguagem que o kernel do linux entenda, por isso utilizaremos o C
 
-para isso precisamos de um codigo fonte que sera feito em c
+#### a. Estruturação de um modulo  
 
-primeiramente precisamo incluir a biblioteca de modulos do linux, para faremos um novo arquivo chamado de tcom.c
+Primeiramente precisamo incluir a biblioteca de modulos do linux, para faremos um novo arquivo chamado de tcom.c
 
 ```sh
 touch tcom.c
@@ -35,17 +40,11 @@ dentro do arquivo temos que adicionar as duas linhas de bibliotecas para que pos
 ```C
 #include <linux/init.h>
 #include <linux/module.h>
-
-
 ```
 
 com as bibliotecas importadas podemos começar o nosso codigo como por exemplo fazer dizer o que nosso driver fará ao ser carregado e descarregado.
 
-https://github.com/torvalds/linux/tree/f1f2f614d535564992f32e720739cb53cf03489f/include/linux/module.h#L72-L74
-
-
- essas funções tem um padrão para se seguir em que a função de inicialização retorna um inteiro e o exit nao retorna nada
-como mostrado acima
+ essas funções tem um padrão para se seguir em que a função de inicialização retorna um inteiro e o exit nao retorna nada como mostrado acima [referencia no linux](https://github.com/torvalds/linux/tree/f1f2f614d535564992f32e720739cb53cf03489f/include/linux/module.h#L72-L74)
 
 
 ```C
@@ -64,11 +63,13 @@ module_exit(finish_com);
 
 ```
 
-essas duas funcoes podem ser chamadas pelas macros module_init e module_exit, que vao ser chamados no momento de inicio do modulo e saida do modulo
+essas duas funcoes podem ser chamadas pelas macros module_init e module_exit, que vao ser chamados no momento de inicio do modulo e saida do modulo [referencia no linux](https://github.com/torvalds/linux/blob/f1f2f614d535564992f32e720739cb53cf03489f/include/linux/module.h#L76-L107)
 
-https://github.com/torvalds/linux/blob/f1f2f614d535564992f32e720739cb53cf03489f/include/linux/module.h#L76-L107
+
 
 tem tambem muitas outra opções para definir o autor do módulo e ate mesmo a licensa dele, mas nao entraremos em muitos detalhes
+
+#### b. Funcionalidades do modulo 
 
 
 Podemos por exemplo fazer um driver que simplesmente mande um Hello World para o kernel quando ele é inicializado para isso semelhante a um programa em C utilizaremos uma função print
@@ -104,8 +105,10 @@ module_init(init_com);
 module_exit(finish_com);
 ```
 
+#### c. Compilando o modulo
 
-podemos entao compilar o nosso programa usando uma Makefile contendo
+
+podemos entao compilar o nosso programa usando uma Makefile contendo 
 
 
 ```Makefile
@@ -114,7 +117,7 @@ obj-m := tcom.o
 
 
 usamos tambem por padrao o lib modules do nosso sistema que esta localizado em ```/lib/modules/$(uname -r)/build``` 
-## se for testar no seu linux deixe /lib/modules/$(uname -r)/build
+> se for testar no seu linux deixe /lib/modules/$(uname -r)/build
 ou podemos gerar nosso proprio com um kernel do linux 
 
 ```bash
@@ -134,7 +137,10 @@ make -C /path/para/source/linux M=`pwd` modules
 
 ```
 
-para compilar
+para compilar ~~ou use Makefile no repo~~
+
+
+#### d. Carregando o modulo e verificando
 
 com isso teremos um arquivo .ko que para todos os fins é o nosso driver, este pode ser carregado e descarregado usando insmod e rmmod respectivamente
 
@@ -161,12 +167,16 @@ kernel: [666.1337] Hello World
 
 Com isso temos a nossa primeira implementacao de um driver que simplesmesnte sobe uma mensagem para o kernel
 
+#### 4. criação do modulo com funcionalidade (comunicação char)
+
+#### a. Adicionar novas funcionalidades
+
+
 Agora precisamos dar alguma funcionalidade para o nosso driver, como por exemplo interfacear com o hardware para simplesmente receber mensagens
 
 Como tudo no linux precisamos abrir um arquivo para fazer a comunicacao com o kernel space e este fazer a comunicacao com o hardware, para isso precisamos importar mais algumas bibliotecas 
 
 ```C
-#include <linux/config.h>
 
 /* para os codigos de erros que serão utilizados daqui para a frente */
 #include <linux/errno.h> 
@@ -192,7 +202,11 @@ Como tudo no linux precisamos abrir um arquivo para fazer a comunicacao com o ke
 
 ```
 
-com esses includes novos podemos trabalhar com algumas funcoes mais avancadas da criacao de drivers e dar mais um passo ao nosso vriver que interpreta mensagens do hardware fisico mas ainda preisamos fazer as funcoes que permitem que nosso driver funcione, no caso para excrever e ler apenas um char, comecaremos declarando qual a regiao de memoria que iremos acessar com o numero de identificação do driver para ele acessar os perifericos que utilizam desse driver
+com esses includes novos podemos trabalhar com algumas funcoes mais avancadas da criacao de drivers e dar mais um passo ao nosso vriver que interpreta mensagens do hardware fisico mas ainda preisamos fazer as funcoes que permitem que nosso driver funcione, no caso para excrever e ler apenas um char.
+
+#### b. Adicionar a relação do driver com o hardware
+
+comecaremos declarando qual a regiao de memoria que iremos acessar com o numero de identificação do driver para ele acessar os perifericos que utilizam desse driver
 
 ```C
 
@@ -204,6 +218,8 @@ int memory_major = 60;
 char *memory_buffer;
 
 ```
+
+#### c. Funções de inicialização de memoria
 
 temos tambem que mudar nossa função de inicialização para que quando o driver se inicialize ele aloque um espaço de memoria que será usado, assim como um programa em C, sua liberação tambem deve ser criada, nossa função de inicialização e saida deve ser mais ou menos assim
 
@@ -271,6 +287,9 @@ void memory_exit(void) {
 }
 
 ```
+
+
+#### d. Funções para manipulação de memoria
 
 
 
@@ -365,7 +384,10 @@ export CROSS_COMPILE=gcc-arm-linux-gnueabi-
 export ARCH=arm
 ```
 
-agora que temos um driver simples que consegue comprrender o que escrevemos e passar para um hardware virtual nosso podemos passar para coisas um pouco mais uteis e complexas como por exemplo controlar um led da placa, e é isso que faremos nessa sessão
+agora que temos um driver simples que consegue compreender o que escrevemos e passar para um hardware virtual nosso podemos passar para coisas um pouco mais uteis e complexas como por exemplo controlar um led da placa, e é isso que faremos nessa sessão
+
+
+### 5. driver que controla GPIO do raspberry
 
 primeiramente utilizaremos o outro codigo de esqueleto ele tem que estar mais ou menos assim 
 
@@ -503,7 +525,7 @@ static void SetGPIOOutputValue(int GPIO, bool outputValue)
 }
 ```
 
-e com essas funcoes prontas podemos entao fazer as funcoes de inicializacao e finalizacao do nosso modulo
+e com essas funcoes prontas podemos entao fazer as funcoes de inicializacao e finalizacao do nosso modulo que nem fizemos no nosso modulo ali em cima
 
 
 ```C
@@ -529,3 +551,4 @@ static void __exit LedBlinkModule_exit(void)
 }
 
 ```
+

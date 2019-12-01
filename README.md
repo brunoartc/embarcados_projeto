@@ -525,7 +525,11 @@ static void SetGPIOOutputValue(int GPIO, bool outputValue)
 }
 ```
 
-e com essas funcoes prontas podemos entao fazer as funcoes de inicializacao e finalizacao do nosso modulo que nem fizemos no nosso modulo ali em cima
+com essas funcoes para a manipulação das GPIOs do nosso raspberry podemos criar um timer que aciona elas em momentos distintos para deixar o pino escolhido como alto ou baixo e verificar com o nosso led 
+
+Poderiamos usar timer mas por questoes de tempo so deixaremos um pino no estado alto e veremos o seu efeito e logo em seguida ao descarregarmos o driver ele voltara ao seu estado normal de input 
+caso alguem queria tentera depois com a biblioteca de timers tambem deixo o codigo fonte da biblioteca para ser estudado [aqui](https://github.com/torvalds/linux/blob/master/include/linux/timer.h)
+
 
 
 ```C
@@ -538,10 +542,7 @@ static int __init LedBlinkModule_init(void)
         (struct GpioRegisters *)__io_address(GPIO_BASE);
     SetGPIOFunction( LedGpioPin, 0b001); //Output
  
-    setup_timer(&s_BlinkTimer, BlinkTimerHandler, 0);
-    result = mod_timer( &s_BlinkTimer, 
-                       jiffies + msecs_to_jiffies( s_BlinkPeriod));
-    BUG_ON(result < 0);
+    SetGPIOOutputValue(LedGpioPin, 1)
 }
  
 static void __exit LedBlinkModule_exit(void)
@@ -551,4 +552,8 @@ static void __exit LedBlinkModule_exit(void)
 }
 
 ```
+
+
+podedmos passar para algo mais avançado como é o caso das interrupções, como ja temos um conhecimento geral de como sao feitos os drivers de linux podemos pular as etapas sobre a inicialização e saida dos drivers bem como o Makefile e suas dependencias
+
 
